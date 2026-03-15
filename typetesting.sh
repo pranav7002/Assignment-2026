@@ -1,8 +1,16 @@
-#!/bin/bash
+640b964#!/bin/bash
 
 WORD_FILE="/usr/share/dict/words"
 COUNT=20
 DIFF="medium"
+
+# CLI options
+while getopts "n:d:" opt; do
+    case $opt in
+        n) COUNT=$OPTARG ;;
+        d) DIFF=$OPTARG ;;
+    esac
+done
 
 # colors
 GRN="\033[32m"
@@ -91,6 +99,14 @@ results() {
     echo "wpm: $wpm"
     echo "accuracy: $acc%"
     echo
+
+    LOG="$HOME/.typetest_log.csv"
+
+    if [[ ! -f "$LOG" ]]; then
+        echo "date,time,wpm,accuracy" > "$LOG"
+    fi
+
+    echo "$(date +%F),$secs,$wpm,$acc" >> "$LOG"
 }
 
 # main
