@@ -1,4 +1,4 @@
-640b964#!/bin/bash
+#!/bin/bash
 
 WORD_FILE="/usr/share/dict/words"
 COUNT=20
