@@ -4,6 +4,18 @@ WORD_FILE="/usr/share/dict/words"
 COUNT=20
 DIFF="medium"
 
+show_help() {
+    echo "flags:"
+    echo "-n         number of words"
+    echo "-d         difficulty        | easy | medium | hard" 
+    echo "--help     get help"
+}
+
+if [[ "$1" == "--help" ]]; then
+    show_help
+    exit 0
+fi    
+
 # CLI options
 while getopts "n:d:" opt; do
     case $opt in
@@ -22,7 +34,7 @@ UND_OFF="\033[24m"
 
 # generate words
 generate_words() {
-    count=$1
+    local count=$1
     min=$2
     max=$3
     grep -E "^[a-z]{$min,$max}$" "$WORD_FILE" | sort -R | head -n "$count"
@@ -42,7 +54,7 @@ words="${words% }"
 # draw screen
 render() {
 
-    clear
+    tput cup 0 0
     echo "typing test"
     echo "----------------"
     echo
