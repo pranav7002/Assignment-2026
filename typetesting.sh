@@ -1,55 +1,135 @@
 #!/bin/bash
 
-goal_text="innovation distinguishes between a leader and a follower, and the code we write today becomes the foundation for the intelligence of tomorrow."
+WORD_FILE="/usr/share/dict/words"
+COUNT=20
+DIFF="medium"
 
-while true; do
+# colors
+GRN="\033[32m"
+RED="\033[31m"
+DIM="\033[2m"
+RST="\033[0m"
+UND="\033[4m"
+UND_OFF="\033[24m"
+
+# generate words
+generate_words() {
+    count=$1
+    min=$2
+    max=$3
+    grep -E "^[a-z]{$min,$max}$" "$WORD_FILE" | sort -R | head -n "$count"
+}
+
+# pick words
+case "$DIFF" in
+    easy) raw=$(generate_words "$COUNT" 2 5);;
+    medium) raw=$(generate_words "$COUNT" 4 8);;
+    hard) raw=$(generate_words "$COUNT" 6 12);;
+    *) raw=$(generate_words "$COUNT" 3 8);;
+esac
+
+words=$(echo "$raw" | tr '\n' ' ')
+words="${words% }"
+
+# draw screen
+render() {
+
     clear
     echo "typing test"
-    echo ""
-    echo "$goal_text"
-    echo ""
-    echo "press [enter] to begin"
-    read 
-    
-    begin=$(date +%s)
-    
-    echo -n "typing> "
-    read user_attempt
-    
-    finish=$(date +%s)
+    echo "----------------"
+    echo
 
-    elapsed_seconds=$(( finish - begin ))
-    
-    # safety check for division operations
-    if [ $elapsed_seconds -lt 1 ]; then elapsed_seconds=1; fi
+    for ((i=0;i<${#words};i++)); do
+        c="${words:$i:1}"
 
-    # calculate words per minute
-    total_chars=${#user_attempt}
-    words_per_minute=$(( (total_chars * 60) / (elapsed_seconds * 5) ))
+        if ((i < pos)); then
+            if [[ "${typed:$i:1}" == "$c" ]]; then
+                printf "${GRN}%s${RST}" "$c"
+            else
+                printf "${RED}%s${RST}" "$c"
+            fi
 
-    # accuracy
-    correct_hits=0
-    goal_length=${#goal_text}
-    attempt_length=${#user_attempt}
-    
-    for (( i=0; i<$goal_length && i<$attempt_length; i++ )); do
-        if [[ "${goal_text:$i:1}" == "${user_attempt:$i:1}" ]]; then
-            ((correct_hits++))
+        elif ((i == pos)); then
+            printf "${UND}%s${UND_OFF}" "$c"
+
+        else
+            printf "${DIM}%s${RST}" "$c"
         fi
     done
-    
-    precision_score=$(( (correct_hits * 100) / goal_length ))
 
-    echo -e "\n--- results ---"
-    echo "duration: $elapsed_seconds s"
-    echo "wpm: $words_per_minute wpm"
-    echo "precision: $precision_score%"
-    echo ""
+    echo
+    echo
+}
 
-    echo "try again? (r= retry, q = quit): "
-    read action_choice
-    if [[ "$action_choice" == "q" ]]; then
-        echo "goodbye!"
-        break
+# results
+results() {
+
+    secs=$1
+    correct=0
+
+    for ((i=0;i<${#words} && i<${#typed};i++)); do
+        [[ "${typed:$i:1}" == "${words:$i:1}" ]] && ((correct++))
+    done
+
+    wc=$(echo "$words" | wc -w | tr -d ' ')
+
+    wpm=0
+    if ((secs>0)); then
+        wpm=$(( (wc * 60) / secs ))
     fi
+
+    acc=0
+    if ((${#words}>0)); then
+        acc=$(( (correct * 100) / ${#words} ))
+    fi
+
+    clear
+    echo
+    echo "results"
+    echo "-------"
+    echo "time: $secs seconds"
+    echo "wpm: $wpm"
+    echo "accuracy: $acc%"
+    echo
+}
+
+# main
+pos=0
+typed=""
+started=0
+t0=0
+
+echo "press enter to start"
+read
+
+render
+
+while ((pos < ${#words})); do
+
+    IFS= read -rsn1 key
+
+    if ((started==0)); then
+        t0=$SECONDS
+        started=1
+    fi
+
+    # backspace
+    if [[ "$key" == $'\x7f' ]]; then
+        if ((pos>0)); then
+            ((pos--))
+            typed="${typed:0:$pos}"
+        fi
+        render
+        continue
+    fi
+
+    [[ -z "$key" ]] && key=" "
+
+    typed+="$key"
+    ((pos++))
+
+    render
+
 done
+
+results $((SECONDS - t0))
